@@ -62,6 +62,125 @@ export type Database = {
         }
         Relationships: []
       }
+      bookings: {
+        Row: {
+          check_in_time: string | null
+          check_out_time: string | null
+          created_at: string
+          end_time: string
+          id: string
+          payment_status: Database["public"]["Enums"]["payment_status"] | null
+          qr_code_url: string | null
+          slot_id: string
+          start_time: string
+          status: Database["public"]["Enums"]["booking_status"] | null
+          stripe_payment_intent_id: string | null
+          total_amount: number
+          updated_at: string
+          user_id: string
+          vehicle_plate: string | null
+        }
+        Insert: {
+          check_in_time?: string | null
+          check_out_time?: string | null
+          created_at?: string
+          end_time: string
+          id?: string
+          payment_status?: Database["public"]["Enums"]["payment_status"] | null
+          qr_code_url?: string | null
+          slot_id: string
+          start_time: string
+          status?: Database["public"]["Enums"]["booking_status"] | null
+          stripe_payment_intent_id?: string | null
+          total_amount: number
+          updated_at?: string
+          user_id: string
+          vehicle_plate?: string | null
+        }
+        Update: {
+          check_in_time?: string | null
+          check_out_time?: string | null
+          created_at?: string
+          end_time?: string
+          id?: string
+          payment_status?: Database["public"]["Enums"]["payment_status"] | null
+          qr_code_url?: string | null
+          slot_id?: string
+          start_time?: string
+          status?: Database["public"]["Enums"]["booking_status"] | null
+          stripe_payment_intent_id?: string | null
+          total_amount?: number
+          updated_at?: string
+          user_id?: string
+          vehicle_plate?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bookings_slot_id_fkey"
+            columns: ["slot_id"]
+            isOneToOne: false
+            referencedRelation: "slots"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bookings_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      parking_lots: {
+        Row: {
+          address: string
+          created_at: string
+          hourly_rate: number | null
+          id: string
+          is_active: boolean | null
+          latitude: number
+          longitude: number
+          name: string
+          owner_id: string
+          total_slots: number | null
+          updated_at: string
+        }
+        Insert: {
+          address: string
+          created_at?: string
+          hourly_rate?: number | null
+          id?: string
+          is_active?: boolean | null
+          latitude: number
+          longitude: number
+          name: string
+          owner_id: string
+          total_slots?: number | null
+          updated_at?: string
+        }
+        Update: {
+          address?: string
+          created_at?: string
+          hourly_rate?: number | null
+          id?: string
+          is_active?: boolean | null
+          latitude?: number
+          longitude?: number
+          name?: string
+          owner_id?: string
+          total_slots?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "parking_lots_owner_id_fkey"
+            columns: ["owner_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -69,10 +188,15 @@ export type Database = {
           email: string | null
           full_name: string | null
           id: string
+          phone: string | null
+          preferred_ev_type: Database["public"]["Enums"]["ev_type"] | null
+          preferred_size: Database["public"]["Enums"]["vehicle_size"] | null
+          role: Database["public"]["Enums"]["user_role"] | null
           stripe_customer_id: string | null
           subscription_status: string | null
           subscription_tier: string | null
           updated_at: string
+          vehicle_plate: string | null
         }
         Insert: {
           avatar_url?: string | null
@@ -80,10 +204,15 @@ export type Database = {
           email?: string | null
           full_name?: string | null
           id: string
+          phone?: string | null
+          preferred_ev_type?: Database["public"]["Enums"]["ev_type"] | null
+          preferred_size?: Database["public"]["Enums"]["vehicle_size"] | null
+          role?: Database["public"]["Enums"]["user_role"] | null
           stripe_customer_id?: string | null
           subscription_status?: string | null
           subscription_tier?: string | null
           updated_at?: string
+          vehicle_plate?: string | null
         }
         Update: {
           avatar_url?: string | null
@@ -91,12 +220,70 @@ export type Database = {
           email?: string | null
           full_name?: string | null
           id?: string
+          phone?: string | null
+          preferred_ev_type?: Database["public"]["Enums"]["ev_type"] | null
+          preferred_size?: Database["public"]["Enums"]["vehicle_size"] | null
+          role?: Database["public"]["Enums"]["user_role"] | null
           stripe_customer_id?: string | null
           subscription_status?: string | null
           subscription_tier?: string | null
           updated_at?: string
+          vehicle_plate?: string | null
         }
         Relationships: []
+      }
+      slots: {
+        Row: {
+          created_at: string
+          ev_supported: Database["public"]["Enums"]["ev_type"] | null
+          id: string
+          is_accessible: boolean | null
+          is_available: boolean | null
+          is_covered: boolean | null
+          length_inches: number | null
+          lot_id: string
+          price_per_hour: number
+          slot_number: string
+          updated_at: string
+          width_inches: number | null
+        }
+        Insert: {
+          created_at?: string
+          ev_supported?: Database["public"]["Enums"]["ev_type"] | null
+          id?: string
+          is_accessible?: boolean | null
+          is_available?: boolean | null
+          is_covered?: boolean | null
+          length_inches?: number | null
+          lot_id: string
+          price_per_hour?: number
+          slot_number: string
+          updated_at?: string
+          width_inches?: number | null
+        }
+        Update: {
+          created_at?: string
+          ev_supported?: Database["public"]["Enums"]["ev_type"] | null
+          id?: string
+          is_accessible?: boolean | null
+          is_available?: boolean | null
+          is_covered?: boolean | null
+          length_inches?: number | null
+          lot_id?: string
+          price_per_hour?: number
+          slot_number?: string
+          updated_at?: string
+          width_inches?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "slots_lot_id_fkey"
+            columns: ["lot_id"]
+            isOneToOne: false
+            referencedRelation: "parking_lots"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       usage_tracking: {
         Row: {
