@@ -216,7 +216,16 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
-      [_ in never]: never
+      booking_status:
+        | "pending"
+        | "confirmed"
+        | "checked_in"
+        | "completed"
+        | "cancelled"
+      ev_type: "none" | "level1" | "level2" | "dc_fast"
+      payment_status: "pending" | "paid" | "failed" | "refunded"
+      user_role: "user" | "admin" | "owner"
+      vehicle_size: "compact" | "standard" | "large" | "motorcycle"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -343,6 +352,18 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      booking_status: [
+        "pending",
+        "confirmed",
+        "checked_in",
+        "completed",
+        "cancelled",
+      ],
+      ev_type: ["none", "level1", "level2", "dc_fast"],
+      payment_status: ["pending", "paid", "failed", "refunded"],
+      user_role: ["user", "admin", "owner"],
+      vehicle_size: ["compact", "standard", "large", "motorcycle"],
+    },
   },
 } as const
