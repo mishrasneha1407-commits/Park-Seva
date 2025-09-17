@@ -70,7 +70,7 @@ const Features = () => {
         <div className="text-center mb-16">
           <div className="inline-flex items-center px-4 py-2 rounded-full bg-primary/10 border border-primary/20 mb-6">
             <span className="text-sm font-medium text-primary">
-              ✨ What makes it lovable?
+              ✨ Why users love it
             </span>
           </div>
           <h2 className="text-4xl md:text-6xl font-bold mb-6">
@@ -119,7 +119,7 @@ const Features = () => {
           </p>
           <div className="inline-flex items-center px-8 py-4 bg-card rounded-full shadow-card border border-border/50">
             <span className="text-foreground font-medium">
-              🚀 Built for growth with React + Tailwind + Supabase
+              🚀 Built with React + Tailwind + Supabase
             </span>
           </div>
         </div>

@@ -1,22 +1,6 @@
-# Welcome to your Lovable project
+# Park Seva
 
-## Project info
-
-**URL**: https://lovable.dev/projects/1430d6c9-9685-457f-bff2-724fbc29d801
-
-## How can I edit this code?
-
-There are several ways of editing your application.
-
-**Use Lovable**
-
-Simply visit the [Lovable Project](https://lovable.dev/projects/1430d6c9-9685-457f-bff2-724fbc29d801) and start prompting.
-
-Changes made via Lovable will be committed automatically to this repo.
-
-**Use your preferred IDE**
-
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+## Local development
 
 The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
 
@@ -60,14 +44,36 @@ This project is built with:
 - shadcn-ui
 - Tailwind CSS
 
-## How can I deploy this project?
+## Environment
 
-Simply open [Lovable](https://lovable.dev/projects/1430d6c9-9685-457f-bff2-724fbc29d801) and click on Share -> Publish.
+Create a `.env` file in the project root with:
 
-## Can I connect a custom domain to my Lovable project?
+```
+VITE_STRIPE_PUBLISHABLE_KEY=pk_test_...
+VITE_SUPABASE_URL=https://<your-ref>.supabase.co
+VITE_SUPABASE_ANON_KEY=eyJ...
+VITE_ENABLE_DEMO_ADMIN=true
+VITE_ENABLE_SEED=true
+```
 
-Yes, you can!
+For the Supabase Edge Function `create-payment-intent`, configure the secret in Supabase or local dev env:
 
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
+- `STRIPE_SECRET_KEY=sk_test_...`
 
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/tips-tricks/custom-domain#step-by-step-guide)
+For the Supabase Edge Function `send-sms` (Twilio), configure the secrets:
+
+- `TWILIO_ACCOUNT_SID=AC...`
+- `TWILIO_AUTH_TOKEN=...`
+- `TWILIO_PHONE=+1...`
+
+Deploy/update functions with Supabase CLI:
+
+```sh
+supabase functions deploy create-payment-intent
+supabase functions deploy send-sms
+supabase secrets set --env-file supabase/.env
+```
+
+## Deployment
+
+Deploy to your preferred hosting (Netlify, Vercel, etc.).

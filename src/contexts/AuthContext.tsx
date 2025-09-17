@@ -31,6 +31,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    // Demo admin bootstrap
+    const demo = localStorage.getItem('demo-admin-login');
+    if (demo === 'true') {
+      const demoUser = {
+        id: '00000000-0000-0000-0000-000000000001',
+        email: 'admin@test.com',
+      } as unknown as User;
+      setUser(demoUser);
+      setSession(null);
+      setProfile({ id: demoUser.id, email: demoUser.email, role: 'admin', full_name: 'Demo Admin' });
+      setLoading(false);
+      return;
+    }
+
     // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
@@ -117,6 +131,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const signIn = async (email: string, password: string) => {
     try {
+      // Demo admin credentials bypass
+      if (email === 'admin@test.com' && password === 'admin123') {
+        const demoUser = {
+          id: '00000000-0000-0000-0000-000000000001',
+          email: 'admin@test.com',
+        } as unknown as User;
+        setUser(demoUser);
+        setSession(null);
+        setProfile({ id: demoUser.id, email: demoUser.email, role: 'admin', full_name: 'Demo Admin' });
+        localStorage.setItem('demo-admin-login', 'true');
+        toast({ title: 'Welcome, Admin', description: 'Signed in as demo admin.' });
+        return { error: null };
+      }
+
       const { error } = await supabase.auth.signInWithPassword({
         email,
         password,
@@ -143,6 +171,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const signOut = async () => {
     try {
+      // Clear demo admin session if present
+      localStorage.removeItem('demo-admin-login');
+
       const { error } = await supabase.auth.signOut();
       if (error) {
         toast({
@@ -151,6 +182,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           variant: "destructive",
         });
       } else {
+        setUser(null);
+        setSession(null);
+        setProfile(null);
         toast({
           title: "Signed out",
           description: "You've been successfully signed out.",

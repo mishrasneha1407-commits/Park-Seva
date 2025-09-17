@@ -8,6 +8,12 @@ import { ThemeProvider } from "@/contexts/ThemeContext";
 import Index from "./pages/Index";
 import Map from "./pages/Map";
 import NotFound from "./pages/NotFound";
+import BookingPage from "./pages/Booking";
+import AdminPage from "./pages/Admin";
+import ProfilePage from "./pages/Profile";
+import BookingsPage from "./pages/Bookings";
+import PricingPage from "./pages/Pricing";
+import SupportPage from "./pages/Support";
 import Header from "./components/Header";
 
 const queryClient = new QueryClient();
@@ -25,6 +31,12 @@ const App = () => (
               <Routes>
                 <Route path="/" element={<Index />} />
                 <Route path="/map" element={<Map />} />
+                <Route path="/book" element={<BookingPage />} />
+                <Route path="/admin" element={<AdminPage />} />
+                <Route path="/profile" element={<ProfilePage />} />
+                <Route path="/bookings" element={<BookingsPage />} />
+                <Route path="/pricing" element={<PricingPage />} />
+                <Route path="/support" element={<SupportPage />} />
                 {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                 <Route path="*" element={<NotFound />} />
               </Routes>

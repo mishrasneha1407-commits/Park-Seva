@@ -1,5 +1,6 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
+import { Link } from 'react-router-dom';
 import { ArrowRight, MapPin, Clock, Shield, Sparkles } from 'lucide-react';
 import heroImage from '@/assets/hero-parking.jpg';
 
@@ -30,7 +31,7 @@ const Hero = () => {
 
           {/* Main Headline */}
           <h1 className="text-5xl md:text-7xl font-bold mb-6 animate-fade-up" style={{ animationDelay: '0.1s' }}>
-            <span className="text-gradient-primary">Easy Park</span>
+            <span className="text-gradient-primary">Park Seva</span>
             <br />
             <span className="text-foreground">Made Simple</span>
           </h1>
@@ -59,19 +60,11 @@ const Hero = () => {
 
           {/* CTA Buttons */}
           <div className="flex flex-col sm:flex-row gap-4 animate-fade-up" style={{ animationDelay: '0.4s' }}>
-            <Button 
-              size="lg" 
-              className="gradient-primary text-white border-0 hover:opacity-90 transition-smooth shadow-glow px-8 py-4 text-lg"
-            >
-              Start Parking Now
-              <ArrowRight className="w-5 h-5 ml-2" />
+            <Button asChild size="lg" className="gradient-primary text-white border-0 hover:opacity-90 transition-smooth shadow-glow px-8 py-4 text-lg">
+              <Link to="/book">Start Parking Now <ArrowRight className="w-5 h-5 ml-2" /></Link>
             </Button>
-            <Button 
-              size="lg" 
-              variant="outline" 
-              className="border-primary/30 text-primary hover:bg-primary hover:text-primary-foreground px-8 py-4 text-lg transition-smooth"
-            >
-              Watch Demo
+            <Button asChild size="lg" variant="outline" className="border-primary/30 text-primary hover:bg-primary hover:text-primary-foreground px-8 py-4 text-lg transition-smooth">
+              <Link to="/map">Watch Demo</Link>
             </Button>
           </div>
 

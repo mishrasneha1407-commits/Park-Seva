@@ -42,39 +42,80 @@ export default function Map() {
     try {
       setLoading(true);
 
-      // Fetch parking lots with available slots count
-      const { data: lots, error } = await supabase
+      // Step 1: fetch active lots
+      const { data: lots, error: lotsErr } = await supabase
         .from('parking_lots')
-        .select(`
-          id,
-          name,
-          address,
-          hourly_rate,
-          total_slots,
-          slots!inner(
-            id,
-            is_available,
-            ev_supported,
-            is_covered,
-            is_accessible
-          )
-        `)
+        .select('id,name,address,hourly_rate,total_slots')
         .eq('is_active', true);
+      if (lotsErr) throw lotsErr;
 
-      if (error) throw error;
+      // Step 2: fetch slots for those lots and compute features client-side
+      const lotIds = (lots ?? []).map((l: any) => l.id);
+      let slotsByLot: Record<string, any[]> = {};
+      if (lotIds.length > 0) {
+        const { data: slots, error: slotsErr } = await supabase
+          .from('slots')
+          .select('id,lot_id,is_available,ev_supported,is_covered,is_accessible')
+          .in('lot_id', lotIds);
+        if (slotsErr) throw slotsErr;
+        for (const s of slots ?? []) {
+          (slotsByLot[s.lot_id] ||= []).push(s);
+        }
+      }
 
-      // Process the data to get available slot counts and features
-      const processedLots = lots?.map((lot: any) => ({
-        id: lot.id,
-        name: lot.name,
-        address: lot.address,
-        hourly_rate: lot.hourly_rate,
-        total_slots: lot.total_slots,
-        available_slots: lot.slots.filter((slot: any) => slot.is_available).length,
-        has_ev: lot.slots.some((slot: any) => slot.ev_supported !== 'none'),
-        has_covered: lot.slots.some((slot: any) => slot.is_covered),
-        has_accessible: lot.slots.some((slot: any) => slot.is_accessible),
-      })) || [];
+      let processedLots = (lots ?? []).map((lot: any) => {
+        const ss = slotsByLot[lot.id] ?? [];
+        return {
+          id: lot.id,
+          name: lot.name,
+          address: lot.address,
+          hourly_rate: lot.hourly_rate,
+          total_slots: lot.total_slots,
+          available_slots: ss.filter((s: any) => s.is_available).length,
+          has_ev: ss.some((s: any) => s.ev_supported !== 'none'),
+          has_covered: ss.some((s: any) => s.is_covered),
+          has_accessible: ss.some((s: any) => s.is_accessible),
+        } as ParkingLot;
+      });
+
+      // Fallback demo data if DB is empty or inaccessible
+      if (!processedLots || processedLots.length === 0) {
+        processedLots = [
+          {
+            id: 'demo-1',
+            name: 'Phoenix Marketcity Pune Parking',
+            address: 'Viman Nagar, Pune',
+            hourly_rate: 40,
+            total_slots: 30,
+            available_slots: 26,
+            has_ev: true,
+            has_covered: true,
+            has_accessible: true,
+          },
+          {
+            id: 'demo-2',
+            name: 'FC Road Public Parking',
+            address: 'Fergusson College Rd, Pune',
+            hourly_rate: 35,
+            total_slots: 30,
+            available_slots: 24,
+            has_ev: true,
+            has_covered: false,
+            has_accessible: true,
+          },
+          {
+            id: 'demo-3',
+            name: 'Shivajinagar Multi-level Parking',
+            address: 'Shivajinagar, Pune',
+            hourly_rate: 30,
+            total_slots: 30,
+            available_slots: 28,
+            has_ev: false,
+            has_covered: true,
+            has_accessible: true,
+          },
+        ];
+      }
 
       setParkingLots(processedLots);
     } catch (error: any) {
@@ -234,7 +275,7 @@ export default function Map() {
                     </div>
                     <div className="text-right">
                       <div className="text-2xl font-bold text-primary">
-                        ${lot.hourly_rate}
+                        ₹{lot.hourly_rate}
                       </div>
                       <div className="text-xs text-muted-foreground">per hour</div>
                     </div>

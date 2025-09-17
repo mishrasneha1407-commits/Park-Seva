@@ -108,8 +108,8 @@ export default function AuthModal({ trigger, defaultMode = 'signin' }: AuthModal
           </DialogTitle>
           <DialogDescription className="text-center">
             {mode === 'signin' 
-              ? 'Sign in to your Easy Park account' 
-              : 'Join Easy Park for seamless parking'}
+              ? 'Sign in to your Park Seva account' 
+              : 'Join Park Seva for seamless parking'}
           </DialogDescription>
         </DialogHeader>
 

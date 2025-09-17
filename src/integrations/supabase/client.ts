@@ -2,8 +2,20 @@
 import { createClient } from '@supabase/supabase-js';
 import type { Database } from './types';
 
-const SUPABASE_URL = "https://nnwekpnwbtfkfowbzcoj.supabase.co";
-const SUPABASE_PUBLISHABLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5ud2VrcG53YnRma2Zvd2J6Y29qIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTcxNjczMDUsImV4cCI6MjA3Mjc0MzMwNX0.-EMsy3Mzx3A5JwVm1kk13X4XFrr2n4lSG9TDwE-uGlU";
+let SUPABASE_URL = (import.meta as any).env.VITE_SUPABASE_URL as string | undefined;
+let SUPABASE_PUBLISHABLE_KEY = (import.meta as any).env.VITE_SUPABASE_ANON_KEY as string | undefined;
+
+// Fallbacks to avoid blank screen in local dev if .env is missing.
+// Replace these with your own project values via .env.
+if (!SUPABASE_URL || !SUPABASE_PUBLISHABLE_KEY) {
+  console.warn(
+    "VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY missing. Using fallback dev keys. Configure your .env for production."
+  );
+  SUPABASE_URL = SUPABASE_URL || "https://rmwfzfkwmmpgqntgqaky.supabase.co";
+  SUPABASE_PUBLISHABLE_KEY =
+    SUPABASE_PUBLISHABLE_KEY ||
+    "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJtd2Z6Zmt3bW1wZ3FudGdxYWt5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTY5MTA0NjMsImV4cCI6MjA3MjQ4NjQ2M30.H_9Ir1rE5WrodCvI_RJub10dVoD-O8d-lo2uSyMMRSo";
+}
 
 // Import the supabase client like this:
 // import { supabase } from "@/integrations/supabase/client";

@@ -1,0 +1,61 @@
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { Tables } from "@/integrations/supabase/types";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+
+type Booking = Tables<"bookings"> & { slot?: Tables<"slots">; lot?: Tables<"parking_lots"> };
+
+export default function BookingsPage() {
+  const userId = "00000000-0000-0000-0000-000000000000";
+  const { data: bookings } = useQuery({
+    queryKey: ["my-bookings", userId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("bookings")
+        .select("*, slots(*, parking_lots(*))")
+        .eq("user_id", userId)
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return (data as any[]).map((b) => ({ ...b, slot: b.slots, lot: b.slots?.parking_lots })) as Booking[];
+    },
+  });
+
+  return (
+    <div className="container mx-auto p-4">
+      <Card>
+        <CardHeader>
+          <CardTitle>My Bookings</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Lot / Slot</TableHead>
+                <TableHead>Start → End</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>Payment</TableHead>
+                <TableHead>Amount</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {bookings?.map((b) => (
+                <TableRow key={b.id}>
+                  <TableCell className="font-medium">{b.lot?.name} — #{b.slot?.slot_number}</TableCell>
+                  <TableCell>
+                    {new Date(b.start_time).toLocaleString()} → {new Date(b.end_time).toLocaleString()}
+                  </TableCell>
+                  <TableCell>{b.status}</TableCell>
+                  <TableCell>{b.payment_status}</TableCell>
+                  <TableCell>₹{b.total_amount}</TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+

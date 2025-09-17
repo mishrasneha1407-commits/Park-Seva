@@ -22,21 +22,31 @@ export default function Header() {
     <header className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 sticky top-0 z-50">
       <div className="container flex h-16 items-center justify-between">
         <Link to="/" className="flex items-center space-x-2">
-          <MapPin className="h-6 w-6 text-primary" />
-          <span className="text-xl font-bold gradient-text">Easy Park</span>
+          <img
+            src="/logo.png"
+            alt="Park Seva"
+            className="h-8 w-auto"
+            onError={(e) => {
+              const target = e.currentTarget as HTMLImageElement;
+              if (target.src.indexOf('/placeholder.svg') === -1) {
+                target.src = '/placeholder.svg';
+              }
+            }}
+          />
+          <span className="text-xl font-bold gradient-text">Park Seva</span>
         </Link>
         
         <nav className="hidden md:flex items-center space-x-8">
           <Link to="/map" className="text-sm font-medium hover:text-primary transition-colors">
             Find Parking
           </Link>
-          <Link to="#features" className="text-sm font-medium hover:text-primary transition-colors">
+          <a href="/#features" className="text-sm font-medium hover:text-primary transition-colors">
             How it Works
-          </Link>
-          <Link to="#" className="text-sm font-medium hover:text-primary transition-colors">
+          </a>
+          <Link to="/pricing" className="text-sm font-medium hover:text-primary transition-colors">
             Pricing
           </Link>
-          <Link to="#" className="text-sm font-medium hover:text-primary transition-colors">
+          <Link to="/support" className="text-sm font-medium hover:text-primary transition-colors">
             Support
           </Link>
         </nav>
