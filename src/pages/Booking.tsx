@@ -9,6 +9,8 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { loadStripe } from "@stripe/stripe-js";
+import { useAuth } from "@/contexts/AuthContext";
+import { useParams } from "react-router-dom";
 
 
 type Slot = Tables<"slots"> & { lot?: Tables<"parking_lots"> };
@@ -22,6 +24,8 @@ function hoursBetween(startISO: string, endISO: string): number {
 
 export default function BookingPage() {
   const { toast } = useToast();
+  const { user } = useAuth();
+  const { lotId: lotIdFromRoute } = useParams();
   const [vehiclePlate, setVehiclePlate] = useState("DEMO-1234");
   const [startTime, setStartTime] = useState(() => new Date().toISOString().slice(0, 16));
   const [endTime, setEndTime] = useState(() => {
@@ -29,7 +33,7 @@ export default function BookingPage() {
     d.setHours(d.getHours() + 2);
     return d.toISOString().slice(0, 16);
   });
-  const [selectedLotId, setSelectedLotId] = useState<string | undefined>(undefined);
+  const [selectedLotId, setSelectedLotId] = useState<string | undefined>(lotIdFromRoute);
   const [selectedSlotId, setSelectedSlotId] = useState<string | undefined>(undefined);
 
   const fallbackSlots: Slot[] = [
@@ -103,11 +107,49 @@ export default function BookingPage() {
           .limit(200);
         if (error) throw error;
         const mapped = (data as any[]).map((row) => ({ ...row, lot: row.parking_lots })) as Slot[];
-        if (mapped.length > 0) return mapped;
-        // fallback: from fallbackSlots matching lot
-        return fallbackSlots.filter((s) => s.lot?.id === selectedLotId);
+        // If DB has some slots, also synthesize more for a richer grid (demo)
+        if (mapped.length > 0) {
+          const countToAdd = Math.max(0, 30 - mapped.length);
+          const synthetic: Slot[] = Array.from({ length: countToAdd }).map((_, i) => ({
+            id: `synthetic-${selectedLotId}-${i + 1}`,
+            slot_number: `${i + 1}`.padStart(2, "0"),
+            price_per_hour: mapped[0]?.price_per_hour ?? 30,
+            is_available: true,
+            is_accessible: i % 12 === 0,
+            is_covered: i % 3 === 0,
+            ev_supported: (i % 5 === 0 ? "level2" : "none") as any,
+            lot: mapped[0]?.lot ?? { id: selectedLotId, name: "Selected Lot" } as any,
+          })) as Slot[];
+          return [...mapped, ...synthetic];
+        }
+        // fallback: from fallbackSlots matching lot, and expand to 30 for grid
+        const base = fallbackSlots.filter((s) => s.lot?.id === selectedLotId);
+        const countToAdd = Math.max(0, 30 - base.length);
+        const synthetic: Slot[] = Array.from({ length: countToAdd }).map((_, i) => ({
+          id: `synthetic-${selectedLotId}-${i + 1}`,
+          slot_number: `${(base.length + i + 1)}`.padStart(2, "0"),
+          price_per_hour: base[0]?.price_per_hour ?? 30,
+          is_available: true,
+          is_accessible: i % 12 === 0,
+          is_covered: i % 3 === 0,
+          ev_supported: (i % 5 === 0 ? "level2" : "none") as any,
+          lot: base[0]?.lot ?? { id: selectedLotId, name: "Selected Lot" } as any,
+        })) as Slot[];
+        return [...base, ...synthetic];
       } catch (_) {
-        return fallbackSlots.filter((s) => s.lot?.id === selectedLotId);
+        const base = fallbackSlots.filter((s) => s.lot?.id === selectedLotId);
+        const countToAdd = Math.max(0, 30 - base.length);
+        const synthetic: Slot[] = Array.from({ length: countToAdd }).map((_, i) => ({
+          id: `synthetic-${selectedLotId}-${i + 1}`,
+          slot_number: `${(base.length + i + 1)}`.padStart(2, "0"),
+          price_per_hour: base[0]?.price_per_hour ?? 30,
+          is_available: true,
+          is_accessible: i % 12 === 0,
+          is_covered: i % 3 === 0,
+          ev_supported: (i % 5 === 0 ? "level2" : "none") as any,
+          lot: base[0]?.lot ?? { id: selectedLotId, name: "Selected Lot" } as any,
+        })) as Slot[];
+        return [...base, ...synthetic];
       }
     },
   });
@@ -131,32 +173,37 @@ export default function BookingPage() {
   const createBooking = useMutation({
     mutationFn: async () => {
       if (!selectedSlot) throw new Error("Please select a slot");
+      const userId = user?.id || "00000000-0000-0000-0000-000000000001";
 
-      const stripePk = import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY as string;
-      if (!stripePk) throw new Error("Missing VITE_STRIPE_PUBLISHABLE_KEY");
-      const stripe = await loadStripe(stripePk);
-      if (!stripe) throw new Error("Stripe failed to load");
+      const stripePk = import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY as string | undefined;
+      let paymentIntentId: string | null = null;
 
-      const resp = await fetch("/functions/v1/create-payment-intent", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ amount: estimatedCost }),
-      });
-      const json = await resp.json();
-      if (!resp.ok) throw new Error(json.error || "Payment intent failed");
+      if (stripePk) {
+        const stripe = await loadStripe(stripePk);
+        if (!stripe) throw new Error("Stripe failed to load");
 
-      const clientSecret = json.clientSecret as string;
-      const paymentIntentId = json.paymentIntentId as string;
+        const resp = await fetch("/functions/v1/create-payment-intent", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ amount: estimatedCost }),
+        });
+        const json = await resp.json();
+        if (!resp.ok) throw new Error(json.error || "Payment intent failed");
 
-      const result = await stripe.confirmPayment({
-        clientSecret,
-        confirmParams: {
-          return_url: `${window.location.origin}/book?paid=1`,
-        },
-      });
-      if (result.error) throw new Error(result.error.message || "Payment confirmation failed");
+        const clientSecret = json.clientSecret as string;
+        paymentIntentId = json.paymentIntentId as string;
 
-      const userId = "00000000-0000-0000-0000-000000000000";
+        const result = await stripe.confirmPayment({
+          clientSecret,
+          confirmParams: {
+            return_url: `${window.location.origin}/book?paid=1`,
+          },
+        });
+        if (result.error) throw new Error(result.error.message || "Payment confirmation failed");
+      } else {
+        // Demo mode: no Stripe configured. Proceed without payment.
+        console.warn("VITE_STRIPE_PUBLISHABLE_KEY not set. Proceeding in demo mode without payment.");
+      }
 
       const { data, error } = await supabase
         .from("bookings")
@@ -169,7 +216,7 @@ export default function BookingPage() {
             total_amount: estimatedCost,
             vehicle_plate: vehiclePlate,
             status: "confirmed",
-            payment_status: "paid",
+            payment_status: stripePk ? "paid" : "pending",
             stripe_payment_intent_id: paymentIntentId,
             qr_code_url: null,
           },
@@ -237,37 +284,65 @@ export default function BookingPage() {
                 <Label>Available Slots</Label>
                 <Button variant="ghost" onClick={() => setSelectedLotId(undefined)}>Change lot</Button>
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Graphical Slot Grid */}
                 <div>
-                  <Select value={selectedSlotId} onValueChange={setSelectedSlotId}>
-                    <SelectTrigger className="w-full mt-1">
-                      <SelectValue placeholder={isLoadingSlots ? "Loading..." : "Select a slot"} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {(slots ?? []).map((s) => (
-                        <SelectItem key={s.id} value={s.id}>
-                          #{s.slot_number} • ₹{s.price_per_hour}/hr
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <Label className="mb-2 block">Pick a Slot</Label>
+                  <div className="rounded-lg border p-3">
+                    <div className="grid grid-cols-6 gap-2">
+                      {(slots ?? []).slice(0, 36).map((s) => {
+                        const isSelected = selectedSlotId === s.id;
+                        const isUnavailable = s.is_available === false;
+                        const isAccessible = s.is_accessible;
+                        return (
+                          <button
+                            key={s.id}
+                            disabled={isUnavailable}
+                            onClick={() => setSelectedSlotId(s.id)}
+                            className={
+                              `h-10 rounded-md text-xs font-medium border transition-colors ` +
+                              (isUnavailable
+                                ? 'bg-muted text-muted-foreground cursor-not-allowed'
+                                : isSelected
+                                  ? 'bg-primary text-primary-foreground border-primary'
+                                  : 'bg-card hover:bg-accent hover:text-accent-foreground') +
+                              (isAccessible ? ' ring-1 ring-blue-300' : '')
+                            }
+                            title={`#${s.slot_number}`}
+                          >
+                            #{s.slot_number}
+                          </button>
+                        );
+                      })}
+                    </div>
+                    <div className="mt-3 flex items-center gap-3 text-xs text-muted-foreground">
+                      <div className="flex items-center gap-1"><span className="inline-block h-3 w-5 rounded bg-primary/80" /> Selected</div>
+                      <div className="flex items-center gap-1"><span className="inline-block h-3 w-5 rounded bg-card border" /> Available</div>
+                      <div className="flex items-center gap-1"><span className="inline-block h-3 w-5 rounded bg-muted" /> Unavailable</div>
+                      <div className="flex items-center gap-1"><span className="inline-block h-3 w-5 rounded ring-1 ring-blue-300" /> Accessible</div>
+                    </div>
+                  </div>
                 </div>
-                <div>
-                  <Label>Vehicle Plate</Label>
-                  <Input className="mt-1" value={vehiclePlate} onChange={(e) => setVehiclePlate(e.target.value)} />
-                </div>
-                <div>
-                  <Label>Start Time</Label>
-                  <Input
-                    className="mt-1"
-                    type="datetime-local"
-                    value={startTime}
-                    onChange={(e) => setStartTime(e.target.value)}
-                  />
-                </div>
-                <div>
-                  <Label>End Time</Label>
-                  <Input className="mt-1" type="datetime-local" value={endTime} onChange={(e) => setEndTime(e.target.value)} />
+
+                {/* Booking details */}
+                <div className="space-y-4">
+                  <div>
+                    <Label>Vehicle Plate</Label>
+                    <Input className="mt-1" value={vehiclePlate} onChange={(e) => setVehiclePlate(e.target.value)} />
+                  </div>
+                  <div>
+                    <Label>Start Time</Label>
+                    <Input
+                      className="mt-1"
+                      type="datetime-local"
+                      value={startTime}
+                      onChange={(e) => setStartTime(e.target.value)}
+                    />
+                  </div>
+                  <div>
+                    <Label>End Time</Label>
+                    <Input className="mt-1" type="datetime-local" value={endTime} onChange={(e) => setEndTime(e.target.value)} />
+                  </div>
                 </div>
               </div>
             </div>

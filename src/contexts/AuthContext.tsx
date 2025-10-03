@@ -3,6 +3,26 @@ import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 
+// Utility function to get the correct app URL for redirects
+const getAppUrl = () => {
+  // Check for environment variable first
+  const envUrl = import.meta.env.VITE_APP_URL;
+  if (envUrl) return envUrl;
+  
+  // Check if we're on Vercel production
+  if (typeof window !== 'undefined' && window.location.hostname.includes('vercel.app')) {
+    return 'https://park-seva.vercel.app';
+  }
+  
+  // Check if we're on localhost
+  if (typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')) {
+    return `${window.location.origin}`;
+  }
+  
+  // Default to production URL for any other case
+  return 'https://park-seva.vercel.app';
+};
+
 interface AuthContextType {
   user: User | null;
   session: Session | null;
@@ -99,7 +119,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const signUp = async (email: string, password: string, fullName?: string) => {
     try {
-      const redirectUrl = `${window.location.origin}/`;
+      const redirectUrl = `${getAppUrl()}/`;
       
       const { error } = await supabase.auth.signUp({
         email,

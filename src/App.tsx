@@ -14,13 +14,14 @@ import ProfilePage from "./pages/Profile";
 import BookingsPage from "./pages/Bookings";
 import PricingPage from "./pages/Pricing";
 import SupportPage from "./pages/Support";
+import AboutPage from "./pages/About";
 import Header from "./components/Header";
 
 const queryClient = new QueryClient();
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
-    <ThemeProvider defaultTheme="system" storageKey="easy-park-theme">
+    <ThemeProvider defaultTheme="dark" storageKey="easy-park-theme">
       <AuthProvider>
         <TooltipProvider>
           <Toaster />
@@ -32,11 +33,14 @@ const App = () => (
                 <Route path="/" element={<Index />} />
                 <Route path="/map" element={<Map />} />
                 <Route path="/book" element={<BookingPage />} />
+                <Route path="/booking" element={<BookingPage />} />
+                <Route path="/book/:lotId" element={<BookingPage />} />
                 <Route path="/admin" element={<AdminPage />} />
                 <Route path="/profile" element={<ProfilePage />} />
                 <Route path="/bookings" element={<BookingsPage />} />
                 <Route path="/pricing" element={<PricingPage />} />
                 <Route path="/support" element={<SupportPage />} />
+                <Route path="/about" element={<AboutPage />} />
                 {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                 <Route path="*" element={<NotFound />} />
               </Routes>

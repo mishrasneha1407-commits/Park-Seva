@@ -49,6 +49,9 @@ export default function Header() {
           <Link to="/support" className="text-sm font-medium hover:text-primary transition-colors">
             Support
           </Link>
+          <Link to="/about" className="text-sm font-medium hover:text-primary transition-colors">
+            About
+          </Link>
         </nav>
 
         <div className="flex items-center space-x-4">

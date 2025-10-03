@@ -117,11 +117,6 @@ const Features = () => {
           <p className="text-muted-foreground mb-6">
             Ready to experience parking that feels amazing?
           </p>
-          <div className="inline-flex items-center px-8 py-4 bg-card rounded-full shadow-card border border-border/50">
-            <span className="text-foreground font-medium">
-              🚀 Built with React + Tailwind + Supabase
-            </span>
-          </div>
         </div>
       </div>
     </section>
