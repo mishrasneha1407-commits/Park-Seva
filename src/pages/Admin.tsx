@@ -7,6 +7,8 @@ import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useState } from "react";
 
 type Slot = Tables<"slots"> & { lot?: Tables<"parking_lots"> };
 type Lot = Tables<"parking_lots">;
@@ -15,6 +17,7 @@ type Booking = Tables<"bookings"> & { slot?: Tables<"slots">; lot?: Tables<"park
 export default function AdminPage() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const [paymentModeFilter, setPaymentModeFilter] = useState<string>("all");
 
   const { data: slots } = useQuery({
     queryKey: ["admin-slots"],
@@ -38,15 +41,21 @@ export default function AdminPage() {
   });
 
   const { data: bookings } = useQuery({
-    queryKey: ["admin-bookings"],
+    queryKey: ["admin-bookings", paymentModeFilter],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from("bookings")
         .select("*, slots(*, parking_lots(*))")
         .order("created_at", { ascending: false })
         .limit(50);
+      
+      // Do not filter by payment_mode at DB level to support environments
+      // where the column may not yet exist. We'll filter client-side.
+      
+      const { data, error } = await query;
       if (error) throw error;
-      return (data as any[]).map((b) => ({ ...b, slot: b.slots, lot: b.slots?.parking_lots })) as Booking[];
+      const rows = (data as any[]).map((b) => ({ ...b, slot: b.slots, lot: b.slots?.parking_lots })) as Booking[];
+      return rows;
     },
   });
 
@@ -144,7 +153,23 @@ export default function AdminPage() {
         <TabsContent value="bookings">
           <Card>
             <CardHeader>
-              <CardTitle>Recent Bookings</CardTitle>
+              <div className="flex items-center justify-between">
+                <CardTitle>Recent Bookings</CardTitle>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-muted-foreground">Filter by payment:</span>
+                  <Select value={paymentModeFilter} onValueChange={setPaymentModeFilter}>
+                    <SelectTrigger className="w-32">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All</SelectItem>
+                      <SelectItem value="stripe">Stripe</SelectItem>
+                      <SelectItem value="UPI">UPI</SelectItem>
+                      <SelectItem value="mock">Mock</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
             </CardHeader>
             <CardContent>
               <Table>
@@ -155,11 +180,20 @@ export default function AdminPage() {
                     <TableHead>Time</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>Payment</TableHead>
+                    <TableHead>Mode</TableHead>
                     <TableHead>Amount</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {bookings?.map((b) => (
+                  {(bookings ?? []).filter((b) => {
+                    if (paymentModeFilter === 'all') return true;
+                    const mode = (b as any).payment_mode
+                      || (b as any).stripe_payment_intent_id ? 'stripe'
+                      : (b as any).transaction_id?.startsWith('UPI-TXN-') ? 'UPI'
+                      : (b as any).transaction_id?.startsWith('MOCK-') ? 'mock'
+                      : 'N/A';
+                    return mode === paymentModeFilter;
+                  }).map((b) => (
                     <TableRow key={b.id}>
                       <TableCell className="font-medium">{b.lot?.name} — #{b.slot?.slot_number}</TableCell>
                       <TableCell>{b.user_id.slice(0, 8)}…</TableCell>
@@ -168,6 +202,18 @@ export default function AdminPage() {
                       </TableCell>
                       <TableCell>{b.status}</TableCell>
                       <TableCell>{b.payment_status}</TableCell>
+                      <TableCell>
+                        {(() => {
+                          const mode = (b as any).payment_mode
+                            || (b as any).stripe_payment_intent_id ? 'stripe'
+                            : (b as any).transaction_id?.startsWith('UPI-TXN-') ? 'UPI'
+                            : (b as any).transaction_id?.startsWith('MOCK-') ? 'mock'
+                            : 'N/A';
+                          return (
+                            <span className="px-2 py-1 text-xs rounded-full bg-blue-100 text-blue-800">{mode}</span>
+                          );
+                        })()}
+                      </TableCell>
                       <TableCell>₹{b.total_amount}</TableCell>
                     </TableRow>
                   ))}

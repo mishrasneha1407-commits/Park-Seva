@@ -2,6 +2,44 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Subtle float animation for cards */
+@keyframes float-soft {
+  0% { transform: translateY(0px); }
+  50% { transform: translateY(-4px); }
+  100% { transform: translateY(0px); }
+}
+
+/* Confetti fall */
+@keyframes confetti-fall {
+  0% { transform: translateY(-10px) rotate(0deg); opacity: 1; }
+  100% { transform: translateY(110vh) rotate(720deg); opacity: 0; }
+}
+
+.confetti-piece {
+  animation: confetti-fall 2.2s ease-in forwards;
+}
+
+/* Shine sweep for buttons/cards */
+.shine {
+  position: relative;
+  overflow: hidden;
+}
+.shine::after {
+  content: "";
+  position: absolute;
+  top: -50%;
+  left: -30%;
+  width: 40%;
+  height: 200%;
+  transform: rotate(20deg);
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.35), transparent);
+  animation: shine-sweep 2.5s linear infinite;
+}
+@keyframes shine-sweep {
+  0% { left: -40%; }
+  100% { left: 120%; }
+}
+
 /* Park Seva Design System - Modern, Smooth */
 
 @layer base {

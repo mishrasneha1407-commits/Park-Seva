@@ -35,6 +35,7 @@ export default function BookingsPage() {
                 <TableHead>Start → End</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Payment</TableHead>
+                <TableHead>Mode</TableHead>
                 <TableHead>Amount</TableHead>
               </TableRow>
             </TableHeader>
@@ -47,6 +48,18 @@ export default function BookingsPage() {
                   </TableCell>
                   <TableCell>{b.status}</TableCell>
                   <TableCell>{b.payment_status}</TableCell>
+                  <TableCell>
+                    {(() => {
+                      const mode = (b as any).payment_mode
+                        || (b as any).stripe_payment_intent_id ? 'stripe'
+                        : (b as any).transaction_id?.startsWith('UPI-TXN-') ? 'UPI'
+                        : (b as any).transaction_id?.startsWith('MOCK-') ? 'mock'
+                        : 'N/A';
+                      return (
+                        <span className="px-2 py-1 text-xs rounded-full bg-blue-100 text-blue-800">{mode}</span>
+                      );
+                    })()}
+                  </TableCell>
                   <TableCell>₹{b.total_amount}</TableCell>
                 </TableRow>
               ))}

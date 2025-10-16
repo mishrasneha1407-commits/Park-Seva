@@ -11,6 +11,8 @@ import { useToast } from "@/hooks/use-toast";
 import { loadStripe } from "@stripe/stripe-js";
 import { useAuth } from "@/contexts/AuthContext";
 import { useParams } from "react-router-dom";
+import UPIPaymentModal from "@/components/UPIPaymentModal";
+import { CreditCard, Smartphone } from "lucide-react";
 
 
 type Slot = Tables<"slots"> & { lot?: Tables<"parking_lots"> };
@@ -35,6 +37,8 @@ export default function BookingPage() {
   });
   const [selectedLotId, setSelectedLotId] = useState<string | undefined>(lotIdFromRoute);
   const [selectedSlotId, setSelectedSlotId] = useState<string | undefined>(undefined);
+  const [showUPIModal, setShowUPIModal] = useState(false);
+  const [paymentMethod, setPaymentMethod] = useState<'stripe' | 'upi'>('stripe');
 
   const fallbackSlots: Slot[] = [
     {
@@ -171,14 +175,23 @@ export default function BookingPage() {
   const estimatedCost = useMemo(() => (selectedSlot ? hours * (selectedSlot.price_per_hour ?? 0) : 0), [hours, selectedSlot]);
 
   const createBooking = useMutation({
-    mutationFn: async () => {
+    mutationFn: async (paymentData?: { transactionId: string; paymentMode: string }) => {
       if (!selectedSlot) throw new Error("Please select a slot");
       const userId = user?.id || "00000000-0000-0000-0000-000000000001";
 
       const stripePk = import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY as string | undefined;
       let paymentIntentId: string | null = null;
+      let paymentStatus: string = "pending";
+      let paymentMode: string = "mock";
+      let transactionId: string | null = null;
 
-      if (stripePk) {
+      if (paymentData) {
+        // UPI payment
+        paymentStatus = "paid";
+        paymentMode = paymentData.paymentMode;
+        transactionId = paymentData.transactionId;
+      } else if (stripePk && paymentMethod === 'stripe') {
+        // Stripe payment
         const stripe = await loadStripe(stripePk);
         if (!stripe) throw new Error("Stripe failed to load");
 
@@ -200,37 +213,66 @@ export default function BookingPage() {
           },
         });
         if (result.error) throw new Error(result.error.message || "Payment confirmation failed");
+        
+        paymentStatus = "paid";
+        paymentMode = "stripe";
+        transactionId = paymentIntentId;
       } else {
-        // Demo mode: no Stripe configured. Proceed without payment.
-        console.warn("VITE_STRIPE_PUBLISHABLE_KEY not set. Proceeding in demo mode without payment.");
+        // Demo mode: no payment configured
+        console.warn("No payment method configured. Proceeding in demo mode.");
+        paymentStatus = "pending";
+        paymentMode = "mock";
+        transactionId = `MOCK-${Date.now()}`;
       }
 
-      const { data, error } = await supabase
+      // If slot id is not a UUID (demo/synthetic), run in demo mode without DB writes
+      const isUuid = (value: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
+      if (!isUuid(selectedSlot.id)) {
+        console.warn("Selected slot is synthetic/demo; skipping DB insert.");
+        return { id: `DEMO-${Date.now()}` } as any;
+      }
+
+      let insertPayload: any = {
+        slot_id: selectedSlot.id,
+        user_id: userId,
+        start_time: new Date(startTime).toISOString(),
+        end_time: new Date(endTime).toISOString(),
+        total_amount: estimatedCost,
+        vehicle_plate: vehiclePlate,
+        status: "confirmed",
+        payment_status: paymentStatus as any,
+        stripe_payment_intent_id: paymentIntentId,
+        payment_mode: paymentMode,
+        transaction_id: transactionId,
+        qr_code_url: null,
+      };
+
+      let insertResp = await supabase
         .from("bookings")
-        .insert([
-          {
-            slot_id: selectedSlot.id,
-            user_id: userId,
-            start_time: new Date(startTime).toISOString(),
-            end_time: new Date(endTime).toISOString(),
-            total_amount: estimatedCost,
-            vehicle_plate: vehiclePlate,
-            status: "confirmed",
-            payment_status: stripePk ? "paid" : "pending",
-            stripe_payment_intent_id: paymentIntentId,
-            qr_code_url: null,
-          },
-        ])
+        .insert([insertPayload])
         .select("id")
         .single();
 
-      if (error) throw error;
+      if (insertResp.error && /payment_mode|transaction_id/i.test(insertResp.error.message)) {
+        // Retry without new columns for environments where migration hasn't run
+        const fallbackPayload = { ...insertPayload };
+        delete (fallbackPayload as any).payment_mode;
+        delete (fallbackPayload as any).transaction_id;
+        insertResp = await supabase
+          .from("bookings")
+          .insert([fallbackPayload])
+          .select("id")
+          .single();
+      }
+
+      if (insertResp.error) throw insertResp.error;
+      const data = insertResp.data;
 
       await supabase.from("slots").update({ is_available: false }).eq("id", selectedSlot.id);
 
       // Fire-and-forget SMS notification (non-blocking for UI)
       const locationName = selectedSlot.lot?.name || "your selected parking lot";
-      const message = `✅ Your parking is confirmed at ${locationName} from ${new Date(startTime).toLocaleString()} to ${new Date(endTime).toLocaleString()}.`;
+      const message = `✅ Payment received for your booking via ${paymentMode.toUpperCase()}. Parking confirmed at ${locationName} from ${new Date(startTime).toLocaleString()} to ${new Date(endTime).toLocaleString()}.`;
       const profilePhone = "+911234567890"; // Replace with user's phone from profile if available
       try {
         await fetch("/functions/v1/send-sms", {
@@ -349,18 +391,68 @@ export default function BookingPage() {
           )}
 
           {selectedLotId && (
-            <div className="flex items-center justify-between border rounded-md p-3">
-              <div>
-                <div className="text-sm text-muted-foreground">Estimated</div>
-                <div className="font-medium">{hours} hour(s) • ₹{estimatedCost}</div>
+            <div className="space-y-4">
+              {/* Payment Method Selection */}
+              <div className="space-y-3">
+                <Label>Payment Method</Label>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <Button
+                    variant={paymentMethod === 'stripe' ? 'default' : 'outline'}
+                    onClick={() => setPaymentMethod('stripe')}
+                    className="flex items-center justify-center gap-2 h-12"
+                  >
+                    <CreditCard className="w-4 h-4" />
+                    Stripe
+                  </Button>
+                  <Button
+                    variant={paymentMethod === 'upi' ? 'default' : 'outline'}
+                    onClick={() => setPaymentMethod('upi')}
+                    className="flex items-center justify-center gap-2 h-12"
+                  >
+                    <Smartphone className="w-4 h-4" />
+                    UPI
+                  </Button>
+                </div>
               </div>
-              <Button onClick={() => createBooking.mutate()} disabled={createBooking.isPending || !selectedSlotId}>
-                {createBooking.isPending ? "Processing..." : "Confirm & Pay"}
-              </Button>
+
+              {/* Booking Summary */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between border rounded-md p-3 gap-3">
+                <div>
+                  <div className="text-sm text-muted-foreground">Estimated</div>
+                  <div className="font-medium">{hours} hour(s) • ₹{estimatedCost}</div>
+                </div>
+                <Button 
+                  onClick={() => {
+                    if (paymentMethod === 'upi') {
+                      setShowUPIModal(true);
+                    } else {
+                      createBooking.mutate(undefined);
+                    }
+                  }} 
+                  disabled={createBooking.isPending || !selectedSlotId}
+                  className="w-full sm:w-auto"
+                >
+                  {createBooking.isPending ? "Processing..." : "Confirm & Pay"}
+                </Button>
+              </div>
             </div>
           )}
         </CardContent>
       </Card>
+
+      {/* UPI Payment Modal */}
+      <UPIPaymentModal
+        isOpen={showUPIModal}
+        onClose={() => setShowUPIModal(false)}
+        amount={estimatedCost}
+        onPaymentSuccess={(transactionId) => {
+          setShowUPIModal(false);
+          createBooking.mutate({ 
+            transactionId, 
+            paymentMode: 'UPI' 
+          });
+        }}
+      />
     </div>
   );
 }
