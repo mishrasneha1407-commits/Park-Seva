@@ -295,7 +295,7 @@ export default function BookingPage() {
   });
 
   return (
-    <div className="container mx-auto p-4 max-w-4xl space-y-4">
+    <div className={"container mx-auto p-4 max-w-4xl space-y-4" + (selectedLotId ? " pb-24 md:pb-4" : "")}>
       <Card>
         <CardHeader>
           <CardTitle>Book a Parking Slot</CardTitle>
@@ -453,6 +453,32 @@ export default function BookingPage() {
           });
         }}
       />
+
+      {/* Sticky mobile action bar */}
+      {selectedLotId && (
+        <div className="md:hidden fixed bottom-0 left-0 right-0 border-t bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 p-3 z-40">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <div className="text-xs text-muted-foreground">Estimated</div>
+              <div className="text-sm font-medium">{hours}h • ₹{estimatedCost}</div>
+            </div>
+            <Button 
+              onClick={() => {
+                if (paymentMethod === 'upi') {
+                  setShowUPIModal(true);
+                } else {
+                  createBooking.mutate(undefined);
+                }
+              }} 
+              disabled={createBooking.isPending || !selectedSlotId}
+              className="min-w-[140px]"
+              size="sm"
+            >
+              {createBooking.isPending ? "Processing..." : "Confirm & Pay"}
+            </Button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

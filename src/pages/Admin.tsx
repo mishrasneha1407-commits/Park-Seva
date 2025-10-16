@@ -171,15 +171,16 @@ export default function AdminPage() {
                 </div>
               </div>
             </CardHeader>
-            <CardContent>
+          <CardContent>
+            <div className="w-full overflow-x-auto">
               <Table>
                 <TableHeader>
                   <TableRow>
                     <TableHead>Lot / Slot</TableHead>
-                    <TableHead>User</TableHead>
-                    <TableHead>Time</TableHead>
+                  <TableHead className="hidden sm:table-cell">User</TableHead>
+                  <TableHead className="hidden sm:table-cell">Time</TableHead>
                     <TableHead>Status</TableHead>
-                    <TableHead>Payment</TableHead>
+                  <TableHead className="hidden sm:table-cell">Payment</TableHead>
                     <TableHead>Mode</TableHead>
                     <TableHead>Amount</TableHead>
                   </TableRow>
@@ -196,12 +197,12 @@ export default function AdminPage() {
                   }).map((b) => (
                     <TableRow key={b.id}>
                       <TableCell className="font-medium">{b.lot?.name} — #{b.slot?.slot_number}</TableCell>
-                      <TableCell>{b.user_id.slice(0, 8)}…</TableCell>
-                      <TableCell>
+                      <TableCell className="hidden sm:table-cell">{b.user_id.slice(0, 8)}…</TableCell>
+                      <TableCell className="hidden sm:table-cell">
                         {new Date(b.start_time).toLocaleString()} → {new Date(b.end_time).toLocaleString()}
                       </TableCell>
                       <TableCell>{b.status}</TableCell>
-                      <TableCell>{b.payment_status}</TableCell>
+                      <TableCell className="hidden sm:table-cell">{b.payment_status}</TableCell>
                       <TableCell>
                         {(() => {
                           const mode = (b as any).payment_mode
@@ -217,8 +218,9 @@ export default function AdminPage() {
                       <TableCell>₹{b.total_amount}</TableCell>
                     </TableRow>
                   ))}
-                </TableBody>
+              </TableBody>
               </Table>
+            </div>
             </CardContent>
           </Card>
         </TabsContent>

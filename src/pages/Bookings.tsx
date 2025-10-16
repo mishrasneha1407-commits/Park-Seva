@@ -28,13 +28,14 @@ export default function BookingsPage() {
           <CardTitle>My Bookings</CardTitle>
         </CardHeader>
         <CardContent>
-          <Table>
+          <div className="w-full overflow-x-auto">
+            <Table>
             <TableHeader>
               <TableRow>
                 <TableHead>Lot / Slot</TableHead>
-                <TableHead>Start → End</TableHead>
+                <TableHead className="hidden sm:table-cell">Start → End</TableHead>
                 <TableHead>Status</TableHead>
-                <TableHead>Payment</TableHead>
+                <TableHead className="hidden sm:table-cell">Payment</TableHead>
                 <TableHead>Mode</TableHead>
                 <TableHead>Amount</TableHead>
               </TableRow>
@@ -43,11 +44,11 @@ export default function BookingsPage() {
               {bookings?.map((b) => (
                 <TableRow key={b.id}>
                   <TableCell className="font-medium">{b.lot?.name} — #{b.slot?.slot_number}</TableCell>
-                  <TableCell>
+                  <TableCell className="hidden sm:table-cell">
                     {new Date(b.start_time).toLocaleString()} → {new Date(b.end_time).toLocaleString()}
                   </TableCell>
                   <TableCell>{b.status}</TableCell>
-                  <TableCell>{b.payment_status}</TableCell>
+                  <TableCell className="hidden sm:table-cell">{b.payment_status}</TableCell>
                   <TableCell>
                     {(() => {
                       const mode = (b as any).payment_mode
@@ -64,7 +65,8 @@ export default function BookingsPage() {
                 </TableRow>
               ))}
             </TableBody>
-          </Table>
+            </Table>
+          </div>
         </CardContent>
       </Card>
     </div>
